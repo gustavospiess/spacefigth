@@ -130,3 +130,5 @@ dmypy.json
 
 # ctag files
 tags
+tags.lock
+tags.temp
