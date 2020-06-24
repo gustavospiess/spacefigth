@@ -8,6 +8,10 @@ def set_up_match():
     match = match_builer.start()
     return (player_a, player_b, match)
 
+
+move = lambda p, q: p.add(q)
+
+
 def test_new_player_is_in_game():
     (player_a, player_b, match) = set_up_match()
     assert player_a in match.players
@@ -101,3 +105,93 @@ def test_on_sensor_informs_current_fuel():
     player_a.appendOnSensor(on_sensor_call_back)
     player_a._fuel = f
     match.ticTimer()
+
+
+def test_on_sensor_informs_current_position():
+    (player_a, player_b, match) = set_up_match()
+
+    position_p = space.Position.randomPosition()
+
+    def on_sensor_call_back(state: space.SensorState):
+        assert state.position == position_p
+    player_a.appendOnSensor(on_sensor_call_back)
+    player_a._position = position_p
+    match.ticTimer()
+
+
+def test_on_action_allow_moving():
+    (player_a, player_b, match) = set_up_match()
+    player_a._fuel = 50
+
+    move_one = lambda p: move(p, space.Position(0, 0, 1))
+
+    pos_list = [player_a.position]
+    def on_action_call_back() -> space.ActionSet:
+        new_pos = move_one(player_a.position)
+        pos_list.append(new_pos)
+        return space.ActionSet(move_to=new_pos)
+
+    player_a.appendOnAction(on_action_call_back)
+    for i in range(10):
+        match.ticTimer()
+        assert pos_list[i+1] == move_one(pos_list[i])
+
+
+def test_movement_is_limited_by_fuel():
+    (player_a, player_b, match) = set_up_match()
+    player_a._fuel = 5
+
+    movement = space.Position(0, 0, 1)
+    move_one = lambda p: p.add(movement)
+
+    pos_list = [player_a.position]
+    def on_action_call_back() -> space.ActionSet:
+        new_pos = move_one(player_a.position)
+        pos_list.append(new_pos)
+        return space.ActionSet(move_to=new_pos)
+
+    player_a.appendOnAction(on_action_call_back)
+    for i in range(10):
+        match.ticTimer()
+    for i in range(4):
+        print(i, pos_list[i+1], move_one(pos_list[i]))
+        assert pos_list[i+1] == move_one(pos_list[i])
+    for i in range(5, 10):
+        print(i, pos_list[i+1], move_one(pos_list[i]))
+
+
+def test_movement_distance_is_limited_by_fuel():
+    (player_a, player_b, match) = set_up_match()
+    player_a._fuel = 10
+
+    move_two = lambda p: move(p, space.Position(0, 0, 2))
+
+    pos_list = [player_a.position]
+    def on_action_call_back() -> space.ActionSet:
+        new_pos = move_two(player_a.position)
+        pos_list.append(new_pos)
+        return space.ActionSet(move_to=new_pos)
+
+    player_a.appendOnAction(on_action_call_back)
+    for i in range(10):
+        match.ticTimer()
+    for i in range(5):
+        assert pos_list[i+1] == move_two(pos_list[i])
+    for i in range(6, 10):
+        assert pos_list[i+1] == pos_list[i]
+
+
+def test_partial_movement_limited_by_fuel():
+    (player_a, player_b, match) = set_up_match()
+    player_a._fuel = 1
+
+    movemment = space.Position(0, 0, 2)
+    on_action_call_back = lambda: space.ActionSet(move_to=move(player_a.position, movemment))
+
+
+    old_pos = player_a.position
+    player_a.appendOnAction(on_action_call_back)
+    match.ticTimer()
+    assert player_a.position == move(old_pos, space.Position(0, 0, 1))
+
+

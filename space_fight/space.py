@@ -1,29 +1,55 @@
 import typing as tp
 import dataclasses
 import random as rd
+from math import sqrt
 
 
 class Position(tp.NamedTuple):
-    x: int
-    y: int
-    z: int
+    x: float
+    y: float
+    z: float
 
     @classmethod
     def randomPosition(cls, bounds = 100):
         """Generates a new position inside the bounds"""
         return cls(*[rd.randint(-1*bounds, bounds) for _ in range(3)])
+    
+    def add(self, other: 'Position') -> 'Position':
+        return Position(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def delta_to(self, other: 'Position') -> 'Position':
+        return Position(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def distance(self, other: 'Position') -> float:
+        delta_x, delta_y, delta_z = self.delta_to(other)
+        return sqrt(delta_x**2 + delta_y**2 +delta_z**2)
+
+
+class Line(tp.NamedTuple):
+    origin: Position
+    destin: Position
+
+    def distance(self):
+        return self.destin.distance(self.origin)
+
+    def at_length(self, length: float) -> 'Position':
+        delta = self.destin.delta_to(self.origin)
+        distance = self.distance()
+        movement = Position(*map(lambda i: i/distance*length, delta))
+        return self.origin.add(movement)
 
 
 @dataclasses.dataclass
 class SensorState():
     """TODO"""
-    fuel:float = dataclasses.field(default=0.0, compare=True, init=True)
+    fuel: float = dataclasses.field(default=0.0)
+    position: tp.Union[Position, None] = dataclasses.field(default=None)
 
 
 @dataclasses.dataclass
 class ActionSet():
     """TODO"""
-    pass
+    move_to: tp.Union[Position, None] = dataclasses.field(default=None)
 
 
 onSensorEvent = tp.List[tp.Callable[[SensorState], tp.NoReturn]];
@@ -68,11 +94,16 @@ class _Player(object):
         """Add event to on action call"""
         self._onAction.add(action)
 
+    @property
+    def baseState(self) -> SensorState:
+        return SensorState(fuel=self.fuel, position=self.position)
+
 class Match(object):
     """A handler for a single match"""
     def __init__(self, player_set: tp.Set[_Player]):
         self._players = player_set
         self._time = 0
+        self._action_dict: tp.Dict[_Player, ActionSet] = dict()
 
         self._init_player_pos()
 
@@ -84,14 +115,39 @@ class Match(object):
         for player in self.players:
             player._position = position_set.pop()
 
-    def ticTimer(self):
+    def _iterate_players_sensor(self):
         for player in self._players:
-            sensor_state = SensorState(fuel = player.fuel);
+            sensor_state = player.baseState
             for sensor in player.onSensor:
                 sensor(sensor_state)
-            actionSet = None
+
+            action_set = None
             for action in player.onAction:
-                actionSet = action()
+                action_set = action()
+            self._action_dict[player] = action_set
+
+    def _iterate_players_action(self):
+        for player in self._players:
+            action_set = self._action_dict[player]
+            if (action_set == None): break
+            if (action_set.move_to == None): break
+            if (player.fuel == 0): break
+
+            destination = action_set.move_to
+            distance = destination.distance(player.position)
+
+            if distance > player.fuel:
+                line = Line(player.position, destination)
+                destination = line.at_length(player.fuel)
+                distance = destination.distance(player.position)
+
+            player._fuel -= distance
+            player._position = destination
+
+    def ticTimer(self):
+        self._iterate_players_sensor()
+        self._iterate_players_action()
+
         self._time += 1
 
     @property
