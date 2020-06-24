@@ -5,8 +5,9 @@ jobs:
   build:
     strategy:
       matrix:
-        python-version: [3.6]
-    runs-on: ubuntu-latest
+        python-version: [3.6, 3.7, 3.8]
+        os: ['ubuntu-latest', 'windows-latest']
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
