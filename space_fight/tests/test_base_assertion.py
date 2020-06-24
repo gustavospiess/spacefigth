@@ -1,5 +1,6 @@
-import pytest # type: ignore
+import pytest  # type: ignore
 from .. import space
+
 
 def set_up_match():
     match_builer = space.MatchBuilder()
@@ -7,9 +8,6 @@ def set_up_match():
     player_b = match_builer.addPlayer()
     match = match_builer.start()
     return (player_a, player_b, match)
-
-
-move = lambda p, q: p.add(q)
 
 
 def test_new_player_is_in_game():
@@ -27,8 +25,12 @@ def test_new_player_has_no_events():
 
 def test_player_keeps_events():
     (player_a, player_b, match) = set_up_match()
-    sensor = lambda state: None
-    action = lambda: None
+
+    def sensor(state):
+        return None
+
+    def action():
+        pass
 
     player_a.appendOnSensor(sensor)
     player_a.appendOnAction(action)
@@ -55,13 +57,14 @@ def test_before_start_match_players_have_no_position():
     match_builer = space.MatchBuilder()
     player_a = match_builer.addPlayer()
     player_b = match_builer.addPlayer()
-    assert player_a.position == None
-    assert player_b.position == None
+    assert player_a.position is None
+    assert player_b.position is None
 
 
 def test_after_start_match_players_have_diferente_positions():
     (player_a, player_b, match) = set_up_match()
     assert player_a.position != player_b.position
+
 
 def test_started_match_inreases_time_by_one_after_tic():
     (player_a, player_b, match) = set_up_match()
@@ -74,11 +77,11 @@ def test_started_match_inreases_time_by_one_after_tic():
 def test_execute_action_event_on_tic():
     (player_a, player_b, match) = set_up_match()
 
-    called = { 'on_sensor': False, 'on_action': False, }
+    called = {'on_sensor': False, 'on_action': False}
+
     def on_sensor_call_back(state: space.SensorState):
         called['on_sensor'] = True
 
-    called_on_action = False
     def on_action_call_back() -> space.ActionSet:
         called['on_action'] = True
         return space.ActionSet()
@@ -110,7 +113,7 @@ def test_on_sensor_informs_current_fuel():
 def test_on_sensor_informs_current_position():
     (player_a, player_b, match) = set_up_match()
 
-    position_p = space.Position.randomPosition()
+    position_p = space.randomPosition()
 
     def on_sensor_call_back(state: space.SensorState):
         assert state.position == position_p
@@ -123,9 +126,9 @@ def test_on_action_allow_moving():
     (player_a, player_b, match) = set_up_match()
     player_a._fuel = 50
 
-    move_one = lambda p: move(p, space.Position(0, 0, 1))
-
+    move_one = space.Position(0, 0, 1).add
     pos_list = [player_a.position]
+
     def on_action_call_back() -> space.ActionSet:
         new_pos = move_one(player_a.position)
         pos_list.append(new_pos)
@@ -141,10 +144,10 @@ def test_movement_is_limited_by_fuel():
     (player_a, player_b, match) = set_up_match()
     player_a._fuel = 5
 
-    movement = space.Position(0, 0, 1)
-    move_one = lambda p: p.add(movement)
+    move_one = space.Position(0, 0, 1).add
 
     pos_list = [player_a.position]
+
     def on_action_call_back() -> space.ActionSet:
         new_pos = move_one(player_a.position)
         pos_list.append(new_pos)
@@ -164,9 +167,10 @@ def test_movement_distance_is_limited_by_fuel():
     (player_a, player_b, match) = set_up_match()
     player_a._fuel = 10
 
-    move_two = lambda p: move(p, space.Position(0, 0, 2))
+    move_two = space.Position(0, 0, 2).add
 
     pos_list = [player_a.position]
+
     def on_action_call_back() -> space.ActionSet:
         new_pos = move_two(player_a.position)
         pos_list.append(new_pos)
@@ -185,13 +189,11 @@ def test_partial_movement_limited_by_fuel():
     (player_a, player_b, match) = set_up_match()
     player_a._fuel = 1
 
-    movemment = space.Position(0, 0, 2)
-    on_action_call_back = lambda: space.ActionSet(move_to=move(player_a.position, movemment))
-
+    move_two = space.Position(0, 0, 2).add
+    move_one = space.Position(0, 0, 1).add
 
     old_pos = player_a.position
-    player_a.appendOnAction(on_action_call_back)
+    player_a.appendOnAction(
+            lambda: space.ActionSet(move_to=move_two(player_a.position)))
     match.ticTimer()
-    assert player_a.position == move(old_pos, space.Position(0, 0, 1))
-
-
+    assert player_a.position == move_one(old_pos)

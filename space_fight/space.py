@@ -1,6 +1,6 @@
-import typing as tp
-import dataclasses
+import functools
 import random as rd
+import typing as tp
 from math import sqrt
 
 
@@ -9,51 +9,71 @@ class Position(tp.NamedTuple):
     y: float
     z: float
 
-    @classmethod
-    def randomPosition(cls, bounds = 100):
-        """Generates a new position inside the bounds"""
-        return cls(*[rd.randint(-1*bounds, bounds) for _ in range(3)])
-    
+    @functools.lru_cache(maxsize=32)
     def add(self, other: 'Position') -> 'Position':
         return Position(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def delta_to(self, other: 'Position') -> 'Position':
-        return Position(self.x - other.x, self.y - other.y, self.z - other.z)
 
-    def distance(self, other: 'Position') -> float:
-        delta_x, delta_y, delta_z = self.delta_to(other)
-        return sqrt(delta_x**2 + delta_y**2 +delta_z**2)
-
-
-class Line(tp.NamedTuple):
+class LineSegment(tp.NamedTuple):
     origin: Position
     destin: Position
 
-    def distance(self):
-        return self.destin.distance(self.origin)
+    @property
+    def distance(self) -> float:
+        return self._distance()
 
-    def at_length(self, length: float) -> 'Position':
-        delta = self.destin.delta_to(self.origin)
-        distance = self.distance()
+    @functools.lru_cache(maxsize=1)
+    def _distance(self) -> float:
+        delta_x, delta_y, delta_z = self.delta
+        return sqrt(delta_x**2 + delta_y**2 + delta_z**2)
+
+    @property
+    def delta(self) -> tp.Tuple[float, float, float]:
+        return self._delta()
+
+    @functools.lru_cache(maxsize=1)
+    def _delta(self) -> tp.Tuple[float, float, float]:
+        """Calculates de diference from both ends `destin-origin`"""
+        o = self.origin
+        d = self.destin
+        return (d.x - o.x, d.y - o.y, d.z - o.z)
+
+    @functools.lru_cache(maxsize=32)
+    def scale(self, length: float) -> 'LineSegment':
+        """Calculates the line with same origin and and slope, with the length
+        equals to `length`"""
+        delta = self.delta
+        distance = self.distance
         movement = Position(*map(lambda i: i/distance*length, delta))
-        return self.origin.add(movement)
+        return LineSegment(self.origin, self.origin.add(movement))
 
 
-@dataclasses.dataclass
-class SensorState():
+class EnemyPos(tp.NamedTuple):
+    pos: Position
+    time: int
+
+
+class EnemyTrace(tp.NamedTuple):
+    corse: LineSegment
+    time: int
+
+
+class SensorState(tp.NamedTuple):
     """TODO"""
-    fuel: float = dataclasses.field(default=0.0)
-    position: tp.Union[Position, None] = dataclasses.field(default=None)
+    fuel: float = 0.0
+    position: tp.Union[Position, None] = None
+    missile_ready: bool = False
+    enemy: tp.Union[tp.Set[EnemyPos], None] = None
+    enemy_trace: tp.Union[tp.Set[EnemyTrace], None] = None
 
 
-@dataclasses.dataclass
-class ActionSet():
+class ActionSet(tp.NamedTuple):
     """TODO"""
-    move_to: tp.Union[Position, None] = dataclasses.field(default=None)
+    move_to: tp.Union[Position, None] = None
 
 
-onSensorEvent = tp.List[tp.Callable[[SensorState], tp.NoReturn]];
-onActionEvent = tp.List[tp.Callable[[], ActionSet]];
+onSensorEvent = tp.List[tp.Callable[[SensorState], tp.NoReturn]]
+onActionEvent = tp.List[tp.Callable[[], ActionSet]]
 
 
 class NotEnouthPlayers(Exception):
@@ -77,7 +97,7 @@ class _Player(object):
     def onAction(self) -> tp.FrozenSet[onActionEvent]:
         """The onSensor event set."""
         return frozenset(self._onAction)
-    
+
     @property
     def position(self) -> Position:
         return self._position
@@ -98,6 +118,7 @@ class _Player(object):
     def baseState(self) -> SensorState:
         return SensorState(fuel=self.fuel, position=self.position)
 
+
 class Match(object):
     """A handler for a single match"""
     def __init__(self, player_set: tp.Set[_Player]):
@@ -110,7 +131,7 @@ class Match(object):
     def _init_player_pos(self):
         position_set = set()
         while len(position_set) < len(self.players):
-            pos = Position.randomPosition()
+            pos = randomPosition()
             position_set.add(pos)
         for player in self.players:
             player._position = position_set.pop()
@@ -129,20 +150,18 @@ class Match(object):
     def _iterate_players_action(self):
         for player in self._players:
             action_set = self._action_dict[player]
-            if (action_set == None): break
-            if (action_set.move_to == None): break
-            if (player.fuel == 0): break
+            if (action_set is None or action_set.move_to is None):
+                break
+            if (player.fuel == 0):
+                break
 
-            destination = action_set.move_to
-            distance = destination.distance(player.position)
+            corse = LineSegment(player.position, action_set.move_to)
 
-            if distance > player.fuel:
-                line = Line(player.position, destination)
-                destination = line.at_length(player.fuel)
-                distance = destination.distance(player.position)
+            if corse.distance > player.fuel:
+                corse = corse.scale(player.fuel)
 
-            player._fuel -= distance
-            player._position = destination
+            player._fuel -= corse.distance
+            player._position = corse.destin
 
     def ticTimer(self):
         self._iterate_players_sensor()
@@ -166,14 +185,22 @@ class MatchBuilder(object):
 
     def __init__(self):
         self._players = list()
-        
+
     def addPlayer(self) -> '_Player':
         """Generates new player in the match and return it"""
         new_player = _Player()
         self._players.append(new_player)
         return new_player
-        
+
     def start(self):
         if len(self._players) < 2:
             raise NotEnouthPlayers()
         return Match(self._players)
+
+
+def randomPosition(bounds: float = 100.0) -> 'Position':
+    """Generates a new position inside the bounds"""
+    def _in_bounds():
+        return rd.random() * bounds * rd.choice((-1, 1))
+
+    return Position(*[_in_bounds() for _ in range(3)])
