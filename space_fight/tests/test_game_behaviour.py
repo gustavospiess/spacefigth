@@ -25,7 +25,7 @@ def test_on_sensor_informs_current_fuel(f):
     def on_sensor_call_back(state: game.Sensor):
         assert state.fuel == f
 
-    player.appendOnSensor(on_sensor_call_back)
+    player.setOnSensor(on_sensor_call_back)
     player._fuel = f
     match.ticTimer()
 
@@ -37,7 +37,7 @@ def test_on_sensor_informs_current_position(position):
 
     def on_sensor_call_back(state: game.Sensor):
         assert state.position == position
-    player.appendOnSensor(on_sensor_call_back)
+    player.setOnSensor(on_sensor_call_back)
     player._position = position
     match.ticTimer()
 
@@ -55,7 +55,7 @@ def test_on_action_allow_moving(direction):
         pos_list.append(new_pos)
         return game.Action(move_to=new_pos)
 
-    player.appendOnAction(on_action_call_back)
+    player.setOnAction(on_action_call_back)
     for i in range(10):
         match.ticTimer()
         assert pos_list[i+1] == move_one(pos_list[i])
@@ -75,7 +75,7 @@ def test_movement_is_limited_by_fuel(direction):
         pos_list.append(new_pos)
         return game.Action(move_to=new_pos)
 
-    player.appendOnAction(on_action_call_back)
+    player.setOnAction(on_action_call_back)
     for i in range(10):
         match.ticTimer()
     for i in range(4):
@@ -100,7 +100,7 @@ def test_movement_distance_is_limited_by_fuel(direction, steps):
         pos_list.append(new_pos)
         return game.Action(move_to=new_pos)
 
-    player.appendOnAction(on_action_call_back)
+    player.setOnAction(on_action_call_back)
     for i in range(10):
         match.ticTimer()
     for i in range(steps):
@@ -119,7 +119,7 @@ def test_partial_movement_limited_by_fuel(desired_distance, fuel_capacity):
     move_fuel = space.Position(0, 0, fuel_capacity).add
 
     old_pos = player.position
-    player.appendOnAction(
+    player.setOnAction(
             lambda: game.Action(move_to=move_desire(player.position)))
     match.ticTimer()
     if fuel_capacity > desired_distance:

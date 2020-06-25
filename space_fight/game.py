@@ -37,20 +37,20 @@ onSensorEvent = tp.List[tp.Callable[[Sensor], tp.NoReturn]]
 class _Player(object):
     """Player interface"""
     def __init__(self):
-        self._onSensor: tp.Set[onSensorEvent] = set()
-        self._onAction: tp.Set[onActionEvent] = set()
+        self._onSensor: onSensorEvent = None
+        self._onAction: onActionEvent = None
         self._position: 'Position' = None
         self._fuel: float = 0.0
 
     @property
-    def onSensor(self) -> tp.FrozenSet[onSensorEvent]:
+    def onSensor(self) -> onSensorEvent:
         """The onSensor event set."""
-        return frozenset(self._onSensor)
+        return self._onSensor
 
     @property
-    def onAction(self) -> tp.FrozenSet[onActionEvent]:
+    def onAction(self) -> onActionEvent:
         """The onSensor event set."""
-        return frozenset(self._onAction)
+        return self._onAction
 
     @property
     def position(self) -> Position:
@@ -60,13 +60,13 @@ class _Player(object):
     def fuel(self) -> float:
         return self._fuel
 
-    def appendOnSensor(self, sensor: onSensorEvent) -> None:
-        """Add event to on sensor call"""
-        self._onSensor.add(sensor)
+    def setOnSensor(self, sensor: onSensorEvent) -> None:
+        """Set event to on sensor call"""
+        self._onSensor = sensor
 
-    def appendOnAction(self, action: onActionEvent) -> None:
-        """Add event to on action call"""
-        self._onAction.add(action)
+    def setOnAction(self, action: onActionEvent) -> None:
+        """Set event to on action call"""
+        self._onAction = action
 
     @property
     def baseState(self) -> Sensor:
@@ -92,17 +92,16 @@ class Match(object):
 
     def _iterate_players_sensor(self):
         for player in self._players:
-            sensor_state = player.baseState
-            for sensor in player.onSensor:
-                sensor(sensor_state)
+            if player.onSensor:
+                sensor_state = player.baseState
+                player.onSensor(sensor_state)
 
-            action_set = None
-            for action in player.onAction:
-                action_set = action()
-            self._action_dict[player] = action_set
+            if player.onAction:
+                action_set = player.onAction()
+                self._action_dict[player] = action_set
 
     def _iterate_players_action(self):
-        for player in self._players:
+        for player in self._action_dict.keys():
             action_set = self._action_dict[player]
             if (action_set is None or action_set.move_to is None):
                 break

@@ -24,8 +24,8 @@ def test_new_player_is_in_game():
 def test_new_player_has_no_events():
     match_builer = game.MatchBuilder()
     player = match_builer.addPlayer()
-    assert len(player.onSensor) == 0
-    assert len(player.onAction) == 0
+    assert player.onSensor is None
+    assert player.onAction is None
 
 
 def test_player_keeps_events():
@@ -37,11 +37,11 @@ def test_player_keeps_events():
     def action():
         pass
 
-    player_a.appendOnSensor(sensor)
-    player_a.appendOnAction(action)
+    player_a.setOnSensor(sensor)
+    player_a.setOnAction(action)
 
-    assert sensor in player_a.onSensor
-    assert action in player_a.onAction
+    assert sensor == player_a.onSensor
+    assert action == player_a.onAction
 
 
 def test_match_cant_start_with_less_than_two_players():
@@ -91,8 +91,8 @@ def test_execute_action_event_on_tic():
         called['on_action'] = True
         return game.Action()
 
-    player_a.appendOnSensor(on_sensor_call_back)
-    player_a.appendOnAction(on_action_call_back)
+    player_a.setOnSensor(on_sensor_call_back)
+    player_a.setOnAction(on_action_call_back)
 
     assert not called['on_sensor']
     assert not called['on_action']
