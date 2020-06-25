@@ -1,9 +1,10 @@
 import pytest  # type: ignore
 from .. import space
+from .. import game
 
 
 def set_up_match():
-    match_builer = space.MatchBuilder()
+    match_builer = game.MatchBuilder()
     player_a = match_builer.addPlayer()
     player_b = match_builer.addPlayer()
     match = match_builer.start()
@@ -17,7 +18,7 @@ def test_new_player_is_in_game():
 
 
 def test_new_player_has_no_events():
-    match_builer = space.MatchBuilder()
+    match_builer = game.MatchBuilder()
     player = match_builer.addPlayer()
     assert len(player.onSensor) == 0
     assert len(player.onAction) == 0
@@ -40,13 +41,13 @@ def test_player_keeps_events():
 
 
 def test_match_cant_start_with_less_than_two_players():
-    match_builer = space.MatchBuilder()
+    match_builer = game.MatchBuilder()
 
-    with (pytest.raises(space.NotEnouthPlayers)):
+    with (pytest.raises(game.NotEnouthPlayers)):
         match_builer.start()
 
     match_builer.addPlayer()
-    with (pytest.raises(space.NotEnouthPlayers)):
+    with (pytest.raises(game.NotEnouthPlayers)):
         match_builer.start()
 
     match_builer.addPlayer()
@@ -54,7 +55,7 @@ def test_match_cant_start_with_less_than_two_players():
 
 
 def test_before_start_match_players_have_no_position():
-    match_builer = space.MatchBuilder()
+    match_builer = game.MatchBuilder()
     player_a = match_builer.addPlayer()
     player_b = match_builer.addPlayer()
     assert player_a.position is None
@@ -79,12 +80,12 @@ def test_execute_action_event_on_tic():
 
     called = {'on_sensor': False, 'on_action': False}
 
-    def on_sensor_call_back(state: space.SensorState):
+    def on_sensor_call_back(state: game.Sensor):
         called['on_sensor'] = True
 
-    def on_action_call_back() -> space.ActionSet:
+    def on_action_call_back() -> game.Action:
         called['on_action'] = True
-        return space.ActionSet()
+        return game.Action()
 
     player_a.appendOnSensor(on_sensor_call_back)
     player_a.appendOnAction(on_action_call_back)
@@ -103,7 +104,7 @@ def test_on_sensor_informs_current_fuel():
 
     f = 10.5
 
-    def on_sensor_call_back(state: space.SensorState):
+    def on_sensor_call_back(state: game.Sensor):
         assert state.fuel == f
     player_a.appendOnSensor(on_sensor_call_back)
     player_a._fuel = f
@@ -115,7 +116,7 @@ def test_on_sensor_informs_current_position():
 
     position_p = space.randomPosition()
 
-    def on_sensor_call_back(state: space.SensorState):
+    def on_sensor_call_back(state: game.Sensor):
         assert state.position == position_p
     player_a.appendOnSensor(on_sensor_call_back)
     player_a._position = position_p
@@ -129,10 +130,10 @@ def test_on_action_allow_moving():
     move_one = space.Position(0, 0, 1).add
     pos_list = [player_a.position]
 
-    def on_action_call_back() -> space.ActionSet:
+    def on_action_call_back() -> game.Action:
         new_pos = move_one(player_a.position)
         pos_list.append(new_pos)
-        return space.ActionSet(move_to=new_pos)
+        return game.Action(move_to=new_pos)
 
     player_a.appendOnAction(on_action_call_back)
     for i in range(10):
@@ -148,10 +149,10 @@ def test_movement_is_limited_by_fuel():
 
     pos_list = [player_a.position]
 
-    def on_action_call_back() -> space.ActionSet:
+    def on_action_call_back() -> game.Action:
         new_pos = move_one(player_a.position)
         pos_list.append(new_pos)
-        return space.ActionSet(move_to=new_pos)
+        return game.Action(move_to=new_pos)
 
     player_a.appendOnAction(on_action_call_back)
     for i in range(10):
@@ -171,10 +172,10 @@ def test_movement_distance_is_limited_by_fuel():
 
     pos_list = [player_a.position]
 
-    def on_action_call_back() -> space.ActionSet:
+    def on_action_call_back() -> game.Action:
         new_pos = move_two(player_a.position)
         pos_list.append(new_pos)
-        return space.ActionSet(move_to=new_pos)
+        return game.Action(move_to=new_pos)
 
     player_a.appendOnAction(on_action_call_back)
     for i in range(10):
@@ -194,6 +195,6 @@ def test_partial_movement_limited_by_fuel():
 
     old_pos = player_a.position
     player_a.appendOnAction(
-            lambda: space.ActionSet(move_to=move_two(player_a.position)))
+            lambda: game.Action(move_to=move_two(player_a.position)))
     match.ticTimer()
     assert player_a.position == move_one(old_pos)
