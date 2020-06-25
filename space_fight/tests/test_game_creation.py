@@ -1,3 +1,8 @@
+"""
+Test the game creation and its properties
+"""
+
+
 import pytest  # type: ignore
 from .. import space
 from .. import game
