@@ -126,3 +126,25 @@ def test_partial_movement_limited_by_fuel(desired_distance, fuel_capacity):
         assert player.position == move_desire(old_pos)
     else:
         assert player.position == move_fuel(old_pos)
+
+
+@pytest.mark.parametrize('direction', [(1, 0, 0), (0, 1, 0), (0, 0, 1)])
+def test_movement_stops_if_not_reset(direction):
+    (player, match) = set_up_match()
+    player._fuel = 100
+
+    desired_position = space.Position(*direction).add(player.position)
+    player.setOnAction(
+            lambda: game.Action(move_to=desired_position))
+    match.ticTimer()
+    assert player.position == desired_position
+    desired_position = None
+
+    old_pos = player.position
+    for _ in range(3):
+        match.ticTimer()
+        assert player.position == old_pos
+
+    for _ in range(10):
+        match.ticTimer()
+    assert player.position == old_pos
