@@ -2,6 +2,7 @@ import functools
 import random as rd
 import typing as tp
 from math import sqrt
+import math
 
 
 class Position(tp.NamedTuple):
@@ -42,10 +43,14 @@ class LineSegment(tp.NamedTuple):
     def scale(self, length: float) -> 'LineSegment':
         """Calculates the line with same origin and and slope, with the length
         equals to `length`"""
-        delta = self.delta
-        distance = self.distance
-        movement = Position(*map(lambda i: i/distance*length, delta))
-        return LineSegment(self.origin, self.origin.add(movement))
+
+        sqrs = (i ** 2 for i in self.delta)
+        hipo = math.sqrt(sum(sqrs))
+
+        delta = map(lambda i: i and i/hipo, self.delta)
+        axis = map(lambda a: a[0] * length + a[1], zip(delta, self.origin))
+
+        return LineSegment(self.origin, Position(*axis))
 
 
 def randomPosition(bounds: float = 100.0) -> 'Position':
