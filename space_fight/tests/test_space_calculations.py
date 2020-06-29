@@ -43,7 +43,7 @@ def test_line_segment_scale_1D():
     pos_a = space.Position(4, 0, 0)
     seg = space.LineSegment(pos_o, pos_a)
 
-    scale_seg = seg.scale(1)
+    scale_seg = seg.resize(1)
     assert scale_seg.destin.x == 1
 
 
@@ -52,7 +52,7 @@ def test_line_segment_scale_2D():
     pos_a = space.Position(1, 1, 0)
     seg = space.LineSegment(pos_o, pos_a)
 
-    scale_seg = seg.scale(1)
+    scale_seg = seg.resize(1)
     assert scale_seg.destin.x == scale_seg.destin.y
     assert round(scale_seg.destin.x, 5) == round(math.sin(math.pi/4), 5)
     assert round(scale_seg.destin.y, 5) == round(math.cos(math.pi/4), 5)
@@ -63,7 +63,7 @@ def test_line_segment_scale_3D():
     pos_a = space.Position(1, 1, 1)
     seg = space.LineSegment(pos_o, pos_a)
 
-    scale_seg = seg.scale(1)
+    scale_seg = seg.resize(1)
     assert scale_seg.destin.x == scale_seg.destin.y == scale_seg.destin.z
     assert round(scale_seg.destin.x, 5) == round(math.sqrt(1/3), 5)
     assert round(scale_seg.destin.y, 5) == round(math.sqrt(1/3), 5)
@@ -75,7 +75,7 @@ def test_line_segment_scale_3D_irregular():
     pos_a = space.Position(1, 2, 3)
     seg = space.LineSegment(pos_o, pos_a)
 
-    scale_seg = seg.scale(1)
+    scale_seg = seg.resize(1)
     assert round(scale_seg.destin.x, 5) == round(math.sqrt(1/14), 5)
     assert round(scale_seg.destin.y, 5) == round(math.sqrt(4/14), 5)
     assert round(scale_seg.destin.z, 5) == round(math.sqrt(9/14), 5)
@@ -86,7 +86,37 @@ def test_line_segment_scale_3D_irregular_out_of_origin():
     pos_a = space.Position(2, 3, 4)
     seg = space.LineSegment(pos_o, pos_a)
 
-    scale_seg = seg.scale(1)
+    scale_seg = seg.resize(1)
     assert round(scale_seg.destin.x, 5) == 1 + round(math.sqrt(1/14), 5)
     assert round(scale_seg.destin.y, 5) == 1 + round(math.sqrt(4/14), 5)
     assert round(scale_seg.destin.z, 5) == 1 + round(math.sqrt(9/14), 5)
+
+
+def test_line_segment_distance_to():
+    pos_o = space.Position(0, 0, 0)
+    pos_a = space.Position(2, 0, 0)
+    pos_b = space.Position(1, 0, 0)
+    seg = space.LineSegment(pos_o, pos_a)
+    distance = seg.distance_to(pos_b)
+
+    assert distance == 0
+
+
+def test_line_segment_distance_to_2():
+    pos_o = space.Position(0, 0, 0)
+    pos_a = space.Position(2, 0, 0)
+    pos_b = space.Position(0, 1, 0)
+    seg = space.LineSegment(pos_o, pos_a)
+    distance = seg.distance_to(pos_b)
+
+    assert distance == 1
+
+
+def test_line_segment_distance_to_3():
+    pos_o = space.Position(0, 0, 0)
+    pos_a = space.Position(2, 0, 0)
+    pos_b = space.Position(1, 1, 0)
+    seg = space.LineSegment(pos_o, pos_a)
+    distance = seg.distance_to(pos_b)
+
+    assert distance == 1

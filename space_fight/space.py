@@ -2,7 +2,9 @@ import functools
 import random as rd
 import typing as tp
 from math import sqrt
-import math
+
+
+float_it = tp.Iterable[float]
 
 
 class Position(tp.NamedTuple):
@@ -21,41 +23,61 @@ class LineSegment(tp.NamedTuple):
 
     @property
     def distance(self) -> float:
-        return self._distance()
-
-    @functools.lru_cache(maxsize=1)
-    def _distance(self) -> float:
-        delta_x, delta_y, delta_z = self.delta
-        return sqrt(delta_x**2 + delta_y**2 + delta_z**2)
+        return _distance(self.origin, self.destin)
 
     @property
-    def delta(self) -> tp.Tuple[float, float, float]:
-        return self._delta()
+    def delta(self) -> float_it:
+        return _delta(self.destin, self.origin)
 
-    @functools.lru_cache(maxsize=1)
-    def _delta(self) -> tp.Tuple[float, float, float]:
-        """Calculates de diference from both ends `destin-origin`"""
-        o = self.origin
-        d = self.destin
-        return (d.x - o.x, d.y - o.y, d.z - o.z)
+    @property
+    def direction(self) -> float_it:
+        for d in self.delta:
+            yield d/self.distance
 
     @functools.lru_cache(maxsize=32)
-    def scale(self, length: float) -> 'LineSegment':
-        """Calculates the line with same origin and and slope, with the length
-        equals to `length`"""
-
-        sqrs = (i ** 2 for i in self.delta)
-        hipo = math.sqrt(sum(sqrs))
-
-        delta = map(lambda i: i and i/hipo, self.delta)
-        axis = map(lambda a: a[0] * length + a[1], zip(delta, self.origin))
-
+    def resize(self, length: float) -> 'LineSegment':
+        """Calculates the line with same origin and and diretction,
+        with the length equals to `length`"""
+        axis = (d * length + o for d, o in zip(self.direction, self.origin))
         return LineSegment(self.origin, Position(*axis))
+
+    @functools.lru_cache(maxsize=32)
+    def distance_to(self, point: Position) -> float:
+        """Calculates the minimum distance from point to any point in the line
+        """
+        from_origin = LineSegment(self.origin, point)
+        mag = self.distance*from_origin.distance
+        cos = _dot_product(self.delta, from_origin.delta)/mag
+        tang = self.resize(cos * from_origin.distance).destin
+        return _distance(point, tang)
+
+
+def _delta(m: float_it, n: float_it) -> float_it:
+    """Generate for the in place substractions:
+        `_delta((1, 2, 3), (4, 5, 6)) = (1-4, 2-5, 3-6)`"""
+    for _m, _n in zip(m, n):
+        yield _m - _n
+
+
+def _square(m: float_it) -> float_it:
+    for _m in m:
+        yield _m ** 2
+
+
+@functools.lru_cache(maxsize=32)
+def _distance(m: float_it, n: float_it) -> float:
+    return sqrt(sum(_square(_delta(m, n))))
+
+
+@functools.lru_cache(maxsize=32)
+def _dot_product(m: float_it, n: float_it) -> float:
+    return sum(_m * _n for _m, _n in zip(m, n))
 
 
 def randomPosition(bounds: float = 100.0) -> 'Position':
     """Generates a new position inside the bounds"""
     def _in_bounds():
-        return rd.random() * bounds * rd.choice((-1, 1))
+        # return rd.random() * bounds * rd.choice((-1, 1))
+        return rd.randint(0, bounds) * rd.choice((-1, 1))
 
     return Position(*[_in_bounds() for _ in range(3)])

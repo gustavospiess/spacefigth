@@ -111,7 +111,7 @@ class Match(object):
             corse = LineSegment(player.position, action_set.move_to)
 
             if corse.distance > player.fuel:
-                corse = corse.scale(player.fuel)
+                corse = corse.resize(player.fuel)
 
             player._fuel -= corse.distance
             player._position = corse.destin
