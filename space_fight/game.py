@@ -1,5 +1,5 @@
 import typing as tp
-from .space import LineSegment, randomPosition, Position
+from .space import LineSegment, random_position, Position3D
 
 
 class NotEnouthPlayers(Exception):
@@ -7,7 +7,7 @@ class NotEnouthPlayers(Exception):
 
 
 class EnemyPos(tp.NamedTuple):
-    pos: Position
+    pos: Position3D
     time: int
 
 
@@ -19,7 +19,7 @@ class EnemyTrace(tp.NamedTuple):
 class Sensor(tp.NamedTuple):
     """TODO"""
     fuel: float = 0.0
-    position: tp.Union[Position, None] = None
+    position: tp.Union[Position3D, None] = None
     missile_ready: bool = False
     enemy: tp.Union[tp.Set[EnemyPos], None] = None
     enemy_trace: tp.Union[tp.Set[EnemyTrace], None] = None
@@ -27,7 +27,7 @@ class Sensor(tp.NamedTuple):
 
 class Action(tp.NamedTuple):
     """TODO"""
-    move_to: tp.Union[Position, None] = None
+    move_to: tp.Union[Position3D, None] = None
 
 
 onActionEvent = tp.List[tp.Callable[[], Action]]
@@ -39,7 +39,7 @@ class _Player(object):
     def __init__(self):
         self._onSensor: onSensorEvent = None
         self._onAction: onActionEvent = None
-        self._position: 'Position' = None
+        self._position: 'Position3D' = None
         self._fuel: float = 0.0
 
     @property
@@ -53,7 +53,7 @@ class _Player(object):
         return self._onAction
 
     @property
-    def position(self) -> Position:
+    def position(self) -> Position3D:
         return self._position
 
     @property
@@ -85,7 +85,7 @@ class Match(object):
     def _init_player_pos(self):
         position_set = set()
         while len(position_set) < len(self.players):
-            pos = randomPosition()
+            pos = random_position()
             position_set.add(pos)
         for player in self.players:
             player._position = position_set.pop()
@@ -111,7 +111,7 @@ class Match(object):
             corse = LineSegment(player.position, action_set.move_to)
 
             if corse.distance > player.fuel:
-                corse = corse.scale(player.fuel)
+                corse = corse.resize(player.fuel)
 
             player._fuel -= corse.distance
             player._position = corse.destin

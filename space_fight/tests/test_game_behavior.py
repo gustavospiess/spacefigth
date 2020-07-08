@@ -31,7 +31,7 @@ def test_on_sensor_informs_current_fuel(f):
 
 
 @pytest.mark.parametrize(
-        'position', [space.randomPosition() for _ in range(4)])
+        'position', [space.random_position() for _ in range(4)])
 def test_on_sensor_informs_current_position(position):
     (player, match) = set_up_match()
 
@@ -47,7 +47,7 @@ def test_on_action_allow_moving(direction):
     (player, match) = set_up_match()
     player._fuel = 50
 
-    move_one = space.Position(*direction).add
+    move_one = space.Position3D(*direction).add
     pos_list = [player.position]
 
     def on_action_call_back() -> game.Action:
@@ -66,7 +66,7 @@ def test_movement_is_limited_by_fuel(direction):
     (player, match) = set_up_match()
     player._fuel = 5
 
-    move_one = space.Position(*direction).add
+    move_one = space.Position3D(*direction).add
 
     pos_list = [player.position]
 
@@ -91,7 +91,7 @@ def test_movement_distance_is_limited_by_fuel(direction, steps):
     (player, match) = set_up_match()
     player._fuel = steps * 2
 
-    move_two = space.Position(*direction).add
+    move_two = space.Position3D(*direction).add
 
     pos_list = [player.position]
 
@@ -115,8 +115,8 @@ def test_partial_movement_limited_by_fuel(desired_distance, fuel_capacity):
     (player, match) = set_up_match()
     player._fuel = fuel_capacity
 
-    move_desire = space.Position(0, 0, desired_distance).add
-    move_fuel = space.Position(0, 0, fuel_capacity).add
+    move_desire = space.Position3D(0, 0, desired_distance).add
+    move_fuel = space.Position3D(0, 0, fuel_capacity).add
 
     old_pos = player.position
     player.setOnAction(
@@ -133,7 +133,7 @@ def test_movement_stops_if_not_reset(direction):
     (player, match) = set_up_match()
     player._fuel = 100
 
-    desired_position = space.Position(*direction).add(player.position)
+    desired_position = space.Position3D(*direction).add(player.position)
     player.setOnAction(
             lambda: game.Action(move_to=desired_position))
     match.ticTimer()
